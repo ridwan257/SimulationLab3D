@@ -1119,7 +1119,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: bdaf7a3fa4d5a894897d373b10c7fa55, type: 2}
+  - {fileID: -876546973899608171, guid: f87146230f5c30042bc1fc909382a8a1, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1159,8 +1159,16 @@ MonoBehaviour:
   mesh: {fileID: 0}
   boidSizeFactor: 0
   maxSpeed: 0
-  minBoundary: {x: 0, y: 0, z: 0}
-  maxBoundary: {x: 0, y: 0, z: 0}
+  maxSteerForce: 0
+  fovAngle: 0
+  perceptionRadius: 0
+  chohesionFactor: 0
+  alignmentFactor: 0
+  separationFactor: 0
+  minHeight: 0
+  maxHeight: 0
+  neighbourDetected: 0
+  firstHitIndex: 0
 --- !u!33 &853539572
 MeshFilter:
   m_ObjectHideFlags: 0

@@ -15,6 +15,10 @@ public class BoidManager : MonoBehaviour
     [SerializeField] private float maxSteerForce;
     [SerializeField] private float fovAngle;
     [SerializeField] private float perceptionRadius;
+    [SerializeField] private float chohesionFactor;
+    [SerializeField] private float alignmentFactor;
+    [SerializeField] private float separationFactor;
+
     [SerializeField] private float minHeight;
     [SerializeField] private float maxHeight;
     [SerializeField] private bool neighbourDetected;
@@ -53,23 +57,30 @@ public class BoidManager : MonoBehaviour
         boidSizeFactor = 2.0f;
         maxSpeed = 8.0f;
         maxSteerForce = 2.0f;
-        fovAngle = 30.0f;
-        perceptionRadius = 10.0f;
+        fovAngle = 40.0f;
+        perceptionRadius = 20.0f;
+        chohesionFactor = 0.6f;
+        alignmentFactor = 1f;
+        separationFactor = 0.8f;
         minHeight = 15;
         maxHeight = 50;
 
 
         // Initilize Boids
-        boidCount = 20;
+        boidCount = 100;
         boids = new Boid[boidCount];
         for(int i = 0; i < boids.Length; i++)
         {
-            boids[i].id = i;
-            boids[i].position = new Vector3(Random.Range(-50, 50), 
-                                            Random.Range(minHeight, maxHeight), 
-                                            Random.Range(-50, 50));
-            boids[i].forward = Vector3.forward;
-            boids[i].velocity = new Vector3(Random.Range(-5, 5), Random.Range(-5, 5), Random.Range(-5, 5));
+            boids[i] = new Boid
+            {
+                id = i,
+                position = new Vector3(Random.Range(-50, 50),
+                                       Random.Range(30, 40),
+                                       Random.Range(-50, 50)),
+                forward = Vector3.forward,
+                velocity = new Vector3(Random.Range(-5, 5), Random.Range(-5, 5), Random.Range(-5, 5)),
+                color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f))
+            };
         }
 
         GenerateMesh();
@@ -87,30 +98,54 @@ public class BoidManager : MonoBehaviour
         for (int i = 0; i < boids.Length; i++)
         {
             // boundary force
-            Vector3 force = boids[i].CalcBoundaryRepulsion(minBoundary, maxBoundary,
+            Vector3 repulsionForce = boids[i].CalcBoundaryRepulsion(minBoundary, maxBoundary,
                                                            minHeight, maxHeight, 
                                                            maxSpeed, maxSteerForce);
-            boids[i].ApplyForce(force);
+
+            Vector3 cohesionDir = boids[i].CalcCohesionDirection(boids, perceptionRadius, fovAngle);
+            Vector3 alignmentDir = boids[i].CalcAlignmentDirection(boids, perceptionRadius, fovAngle);
+            Vector3 separationDir = boids[i].CalcSeparationDirection(boids, perceptionRadius, fovAngle);
+
+            Vector3 steerCohesion  = boids[i].CalcSteerForce(cohesionDir, maxSpeed, maxSteerForce);
+            Vector3 steerAlignment = boids[i].CalcSteerForce(alignmentDir, maxSpeed, maxSteerForce);
+            Vector3 steerSeparation = boids[i].CalcSteerForce(separationDir, maxSpeed, maxSteerForce);
+
+            Vector3 flockingForce = 2.5f * repulsionForce +
+                                    chohesionFactor * steerCohesion + 
+                                    alignmentFactor * steerAlignment + 
+                                    separationFactor * steerSeparation;
+            boids[i].ApplyForce(flockingForce);
+
+            for(int j=0; j < boids.Length; j++)
+            {
+                if (i == j) continue;
+
+                if(boids[i].CanSeeNeighbor(boids[j], perceptionRadius, fovAngle))
+                {
+                    boids[i].color = boids[j].color;
+                    break;
+                }
+            }
 
             // apply and update force
             boids[i].Update(maxSpeed, Time.deltaTime);
         }
 
-        int j = 1;
-        for (; j < boidCount; j++)
-        {
-            if(boids[0].CanSeeNeighbor(boids[j], perceptionRadius, fovAngle))
-            {
-                neighbourDetected = true;
-                firstHitIndex = j;
-                break;
-            }
-        }
-        if (j == boidCount)
-        {
-            neighbourDetected = false;
-            firstHitIndex = 0;
-        }
+        // int j = 1;
+        // for (; j < boidCount; j++)
+        // {
+        //     if(boids[0].CanSeeNeighbor(boids[j], perceptionRadius, fovAngle))
+        //     {
+        //         neighbourDetected = true;
+        //         firstHitIndex = j;
+        //         break;
+        //     }
+        // }
+        // if (j == boidCount)
+        // {
+        //     neighbourDetected = false;
+        //     firstHitIndex = 0;
+        // }
     }
 
     private void GetGroundBoundary(out Vector3 min, out Vector3 max)
@@ -136,9 +171,7 @@ public class BoidManager : MonoBehaviour
         {
             rotationMachine = Quaternion.LookRotation(boids[i].GetDirection());
 
-            Color boidColor = Color.gray;
-            if(firstHitIndex != 0) boidColor = (i == firstHitIndex) ? Color.yellow : Color.gray; 
-            if(i == 0) boidColor = (neighbourDetected) ? Color.red : Color.green;
+            Color boidColor = boids[i].color;
 
             for (int j = 0; j < baseVertices.Length; j++)
             {
@@ -176,24 +209,24 @@ public class BoidManager : MonoBehaviour
         //        );
         //}
 
-        Boid b = boids[0];
-        Vector3 pos = b.position;
-        Vector3 forward = b.GetDirection();
+        // Boid b = boids[0];
+        // Vector3 pos = b.position;
+        // Vector3 forward = b.GetDirection();
 
-        Gizmos.color = neighbourDetected ? new Color(1, 0, 0, 0.25f) : new Color(0, 1, 0, 0.25f);
-        int rays = 16;
-        for (int i = 0; i < rays; i++)
-        {
-            Quaternion circleRotation = Quaternion.AngleAxis(i * (360f / rays), forward);
-            Vector3 upOrSide = (Mathf.Abs(forward.y) > 0.9f) ? Vector3.right : Vector3.up;
-            Vector3 spreadDirection = Vector3.Cross(forward, upOrSide).normalized;
+        // Gizmos.color = neighbourDetected ? new Color(1, 0, 0, 0.25f) : new Color(0, 1, 0, 0.25f);
+        // int rays = 16;
+        // for (int i = 0; i < rays; i++)
+        // {
+        //     Quaternion circleRotation = Quaternion.AngleAxis(i * (360f / rays), forward);
+        //     Vector3 upOrSide = (Mathf.Abs(forward.y) > 0.9f) ? Vector3.right : Vector3.up;
+        //     Vector3 spreadDirection = Vector3.Cross(forward, upOrSide).normalized;
 
-            Vector3 rayDir = Quaternion.AngleAxis(fovAngle, Vector3.Cross(forward, spreadDirection)) * forward;
-            rayDir = circleRotation * rayDir;
-            Gizmos.DrawRay(pos, rayDir * perceptionRadius);
-        }
-        Gizmos.color = Color.blue;
-        Gizmos.DrawRay(pos, forward * perceptionRadius);
+        //     Vector3 rayDir = Quaternion.AngleAxis(fovAngle, Vector3.Cross(forward, spreadDirection)) * forward;
+        //     rayDir = circleRotation * rayDir;
+        //     Gizmos.DrawRay(pos, rayDir * perceptionRadius);
+        // }
+        // Gizmos.color = Color.blue;
+        // Gizmos.DrawRay(pos, forward * perceptionRadius);
     }
 
 }

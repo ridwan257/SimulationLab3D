@@ -1,7 +1,4 @@
-using System;
-using Unity.VisualScripting;
 using UnityEngine;
-
 
 namespace Boids
 {
@@ -12,6 +9,7 @@ namespace Boids
         public Vector3 velocity;
         public Vector3 acceleration;
         public Vector3 forward;
+        public Color color;
 
 		public Vector3 GetDirection()
 		{
@@ -70,21 +68,57 @@ namespace Boids
             Vector3 force = Vector3.zero;
             // Check for boundary
             if (position.y < minHeight)
-                force += CalcSteerForce(Vector3.up, maxSpeed, maxSteerForce, 2.0f);
+                force += CalcSteerForce(Vector3.up, maxSpeed, maxSteerForce);
             else if (position.y > maxHeight)
-                force += CalcSteerForce(Vector3.down, maxSpeed, maxSteerForce, 1.5f);
+                force += CalcSteerForce(Vector3.down, maxSpeed, maxSteerForce);
 
             if (position.x < minBoundary.x)
-                force += CalcSteerForce(Vector3.right, maxSpeed, maxSteerForce, 1.5f);
+                force += CalcSteerForce(Vector3.right, maxSpeed, maxSteerForce);
             else if (position.x > maxBoundary.x)
-                force += CalcSteerForce(Vector3.left, maxSpeed, maxSteerForce, 1.5f);
+                force += CalcSteerForce(Vector3.left, maxSpeed, maxSteerForce);
 
             if (position.z < minBoundary.z)
-                force += CalcSteerForce(Vector3.forward, maxSpeed, maxSteerForce, 1.5f);
+                force += CalcSteerForce(Vector3.forward, maxSpeed, maxSteerForce);
             else if (position.z > maxBoundary.z)
-                force += CalcSteerForce(Vector3.back, maxSpeed, maxSteerForce, 1.5f);
+                force += CalcSteerForce(Vector3.back, maxSpeed, maxSteerForce);
 
             return force;
+        }
+
+        public readonly Vector3 CalcAlignmentDirection(Boid[] boids, float pRadius, float fovAngle)
+        {
+            Vector3 targetDirection = Vector3.zero;
+            int count = 0;
+            
+            for(int i=0; i < boids.Length; i++)
+            {
+                if (boids[i].id == id) continue;
+                if (!CanSeeNeighbor(boids[i], pRadius, fovAngle)) continue;
+
+                count++;
+                targetDirection += boids[i].forward;
+            }
+            
+            return (count==0) ? targetDirection : targetDirection / count;
+        }
+
+        public readonly Vector3 CalcCohesionDirection(Boid[] boids, float pRadius, float fovAngle)
+        {
+            Vector3 targetDirection = Vector3.zero;
+            int count = 0;
+            
+            for(int i=0; i < boids.Length; i++)
+            {
+                if (boids[i].id == id) continue;
+                if (!CanSeeNeighbor(boids[i], pRadius, fovAngle)) continue;
+
+                count++;
+                targetDirection += boids[i].position;
+            }
+            if(count == 0) return targetDirection;
+
+            targetDirection /= count;
+            return targetDirection - position;
         }
 
         public readonly Vector3 CalcSeparationDirection(Boid[] boids, float pRadius, float fovAngle)
@@ -117,7 +151,4 @@ namespace Boids
             return targetDirection;
         }
     };
-
-    
-
 }
