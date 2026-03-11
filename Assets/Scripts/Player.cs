@@ -3,24 +3,23 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float moveSpeed = 12f;
-    public float mouseSensitivity = 2f;
+    public float moveSpeed;
+    public float mouseSensitivity;
 
     [Header("References")]
     private Transform cameraTransform;
-    private Rigidbody rb; // Reference to the Rigidbody
+    private Rigidbody rb;
     private float xRotation = 0f;
-    private Vector3 moveInput; // Store input here
+    private Vector3 moveInput;
 
     void Start()
     {
-        // Get the Rigidbody component
+        moveSpeed = 10f;
+        mouseSensitivity = 2f;
+
+        // Others
         rb = GetComponent<Rigidbody>();
-
-        // IMPORTANT: Set collision detection to Continuous in code or Inspector
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-        // Freeze rotation so physics doesn't tip the capsule over
         rb.freezeRotation = true;
 
         cameraTransform = GetComponentInChildren<Camera>().transform;
@@ -32,13 +31,11 @@ public class Player : MonoBehaviour
     {
         HandleRotation();
 
-        // Capture input in Update (more responsive)
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
         moveInput = (transform.right * x) + (transform.forward * z).normalized;
     }
 
-    // Use FixedUpdate for all Rigidbody/Physics movements
     void FixedUpdate()
     {
         HandleMovement();
@@ -58,10 +55,7 @@ public class Player : MonoBehaviour
 
     private void HandleMovement()
     {
-        // Calculate the target position
         Vector3 targetVelocity = moveSpeed * Time.fixedDeltaTime * moveInput;
-
-        // MovePosition is "Wall-Friendly" movement
         rb.MovePosition(rb.position + targetVelocity);
     }
 }

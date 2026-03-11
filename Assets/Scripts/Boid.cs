@@ -10,8 +10,9 @@ namespace Boids
         public Vector3 acceleration;
         public Vector3 forward;
         public Color color;
+        public Color baseColor;
 
-		public Vector3 GetDirection()
+        public Vector3 GetDirection()
 		{
             if (velocity.sqrMagnitude > 1e-6f)
             {
@@ -44,6 +45,12 @@ namespace Boids
             steer *= weight;
 
             return Vector3.ClampMagnitude(steer, maxSteerForce);
+        }
+
+        public readonly Vector3 CalcLevelFlightForce(float maxSpeed, float maxSteerForce)
+        {
+            Vector3 desired = new Vector3(velocity.x, 0, velocity.z);
+            return CalcSteerForce(desired, maxSpeed, maxSteerForce);
         }
 
         public readonly bool CanSeeNeighbor(Boid other, float pRadius, float fovAngle)
